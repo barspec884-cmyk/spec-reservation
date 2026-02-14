@@ -3,53 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Bar Spec | RES LOG</title>
+    <title>Bar SPEC Reservation</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Reservation">
+    <link rel="apple-touch-icon" href="icon.png">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
-<style>
+
+    <style>
     :root { 
         --bg: #1a1a1a; --card: #2d2d2d; --text: #eee; 
         --accent-1: #d4af37; --accent-2: #ff4d4d; --today-blue: #007bff; --save-green: #28a745;
     }
-    body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 15px; -webkit-tap-highlight-color: transparent; }
-    .section { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-    .section-title { font-size: 0.9rem; color: var(--accent-1); margin-bottom: 12px; font-weight: bold; border-left: 4px solid var(--accent-1); padding-left: 8px; }
+    
+    /* 【修正】全体を中央寄せにする設定 */
+    body { 
+        background: var(--bg); 
+        color: var(--text); 
+        font-family: sans-serif; 
+        margin: 0; 
+        padding: 20px 15px; 
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* 左右中央 */
+        -webkit-tap-highlight-color: transparent; 
+    }
 
-    /* カレンダーデザイン */
-    .flatpickr-day { font-weight: bold !important; border-radius: 6px !important; display: flex; align-items: center; justify-content: center; height: 35px !important; }
+    /* 各セクションの幅を制限して中央に置く */
+    .section { 
+        background: var(--card); 
+        padding: 20px; 
+        border-radius: 12px; 
+        margin-bottom: 20px; 
+        width: 100%;
+        max-width: 600px; /* iPadで見やすい幅 */
+        box-sizing: border-box;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .section-title { font-size: 1rem; color: var(--accent-1); margin-bottom: 15px; font-weight: bold; border-left: 4px solid var(--accent-1); padding-left: 10px; }
+
+    /* 【修正】カレンダー本体を中央寄せ */
+    #calendar-inline {
+        display: flex;
+        justify-content: center;
+        margin: 10px 0;
+    }
+
+    .flatpickr-day { font-weight: bold !important; border-radius: 6px !important; display: flex; align-items: center; justify-content: center; height: 38px !important; }
     .flatpickr-day.today { border: 2px solid var(--today-blue) !important; color: #fff !important; }
 
-    /* 予約1件（ゴールド） */
-    .res-single { position: relative !important; color: #fff !important; }
-    .res-single::after { content: "●"; position: absolute; bottom: -2px; left: 0; right: 0; text-align: center; font-size: 14px; color: var(--accent-1); text-shadow: 0 0 5px rgba(212, 175, 55, 0.8); }
+    /* 【修正】ドット位置を「数字の真下」に完全固定 */
+    .res-single { position: relative !important; }
+    .res-single::after { 
+        content: "●"; 
+        position: absolute; 
+        bottom: 1px; 
+        left: 0; 
+        right: 0; 
+        text-align: center; 
+        margin: auto; 
+        font-size: 12px; 
+        color: var(--accent-1); 
+    }
 
-    /* 予約2件以上（赤枠!!） */
-    .res-multiple { position: relative !important; color: #fff !important; border: 2px solid var(--accent-2) !important; background: rgba(255, 77, 77, 0.1) !important; }
-    .res-multiple::after { content: "!!"; position: absolute; top: -4px; right: 1px; font-size: 11px; color: var(--accent-2); font-weight: 900; }
+    /* 【修正】!!マークの位置調整 */
+    .res-multiple { position: relative !important; border: 2px solid var(--accent-2) !important; background: rgba(255, 77, 77, 0.1) !important; }
+    .res-multiple::after { 
+        content: "!!"; 
+        position: absolute; 
+        top: -2px; 
+        right: 2px; 
+        font-size: 11px; 
+        color: var(--accent-2); 
+        font-weight: 900; 
+    }
 
-    input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 5px; background: #444; color: #fff; box-sizing: border-box; font-size: 16px; }
+    input, textarea { width: 100%; padding: 14px; margin-bottom: 12px; border: 1px solid #444; border-radius: 8px; background: #333; color: #fff; box-sizing: border-box; font-size: 16px; }
     .flex-row { display: flex; gap: 10px; }
-    .tile-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    
+    /* 席選択ボタンを2カラムにして押しやすく */
+    .tile-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     .tile-item { display: none; }
-    .tile-label { flex: 1; min-width: 85px; text-align: center; background: #444; padding: 12px 5px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; height: 44px; border: 1px solid transparent; }
-    .tile-item:checked + .tile-label { background: var(--accent-1); color: #000; font-weight: bold; }
+    .tile-label { text-align: center; background: #444; padding: 15px 5px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; height: 50px; border: 2px solid transparent; }
+    .tile-item:checked + .tile-label { background: var(--accent-1); color: #000; font-weight: bold; border-color: #fff; }
     
-    .btn-confirm { width: 100%; padding: 20px; background: var(--accent-1); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 1.2rem; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+    .btn-confirm { width: 100%; padding: 20px; background: var(--accent-1); color: #000; border: none; border-radius: 10px; font-weight: bold; font-size: 1.2rem; cursor: pointer; margin-top: 10px; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
 
-    /* モーダル表示 */
+    /* モーダル */
     #detail-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-    .modal-content { background: var(--card); width: 92%; max-width: 450px; padding: 20px; border-radius: 15px; border-top: 10px solid var(--accent-1); max-height: 85vh; overflow-y: auto; }
+    .modal-content { background: var(--card); width: 92%; max-width: 450px; padding: 25px; border-radius: 20px; border-top: 10px solid var(--accent-1); max-height: 85vh; overflow-y: auto; }
     .modal-content.alert-mode { border-top-color: var(--accent-2); }
-    
-    .res-card { background: #383838; border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 1px solid #555; }
-    .res-card.multi { border-color: var(--accent-2); }
-    .btn-close { width: 100%; padding: 15px; background: #555; color: #fff; border: none; border-radius: 8px; margin-top: 5px; font-weight: bold; cursor: pointer; }
+    .res-card { background: #383838; border-radius: 12px; padding: 18px; margin-bottom: 15px; border: 1px solid #555; }
+    .btn-close { width: 100%; padding: 15px; background: #555; color: #fff; border: none; border-radius: 10px; margin-top: 5px; font-weight: bold; }
 </style>
 </head>
 <body>
 
-<div class="header" style="text-align: center; margin-bottom: 15px;">
-    <h1 style="color:var(--accent-1); margin:0; font-size:1.5rem;">Reservation</h1>
+<div class="header" style="text-align: center; margin-bottom: 25px; width: 100%; max-width: 600px;">
+    <h1 style="color:var(--accent-1); margin:0; font-size:1.8rem; letter-spacing: 2px;">Bar SPEC Reservation</h1>
 </div>
 
 <div class="section">
@@ -201,7 +257,6 @@ function openConfirm() {
 
     if(!nameVal || !phoneVal) return alert("名前と電話番号は必須です");
 
-    // 重複チェック
     if (!editingReceivedAt) {
         const isDuplicate = currentReservations.some(r => r.seat === seatName);
         if (isDuplicate) {
