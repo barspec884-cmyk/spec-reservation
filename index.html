@@ -1,0 +1,232 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Bar Spec | RES LOG</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+<style>
+    :root { 
+        --bg: #1a1a1a; --card: #2d2d2d; --text: #eee; 
+        --accent-1: #d4af37; --accent-2: #ff4d4d; --today-blue: #007bff; --save-green: #28a745;
+    }
+    body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 15px; -webkit-tap-highlight-color: transparent; }
+    .section { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .section-title { font-size: 0.9rem; color: var(--accent-1); margin-bottom: 12px; font-weight: bold; border-left: 4px solid var(--accent-1); padding-left: 8px; }
+
+    /* カレンダーデザイン */
+    .flatpickr-day { font-weight: bold !important; border-radius: 6px !important; display: flex; align-items: center; justify-content: center; height: 35px !important; }
+    .flatpickr-day.today { border: 2px solid var(--today-blue) !important; color: #fff !important; }
+
+    /* 予約1件（ゴールド） */
+    .res-single { position: relative !important; color: #fff !important; }
+    .res-single::after { content: "●"; position: absolute; bottom: -2px; left: 0; right: 0; text-align: center; font-size: 14px; color: var(--accent-1); text-shadow: 0 0 5px rgba(212, 175, 55, 0.8); }
+
+    /* 予約2件以上（赤枠!!） */
+    .res-multiple { position: relative !important; color: #fff !important; border: 2px solid var(--accent-2) !important; background: rgba(255, 77, 77, 0.1) !important; }
+    .res-multiple::after { content: "!!"; position: absolute; top: -4px; right: 1px; font-size: 11px; color: var(--accent-2); font-weight: 900; }
+
+    input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 5px; background: #444; color: #fff; box-sizing: border-box; font-size: 16px; }
+    .flex-row { display: flex; gap: 10px; }
+    .tile-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .tile-item { display: none; }
+    .tile-label { flex: 1; min-width: 85px; text-align: center; background: #444; padding: 12px 5px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; height: 44px; border: 1px solid transparent; }
+    .tile-item:checked + .tile-label { background: var(--accent-1); color: #000; font-weight: bold; }
+    
+    .btn-confirm { width: 100%; padding: 20px; background: var(--accent-1); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 1.2rem; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+
+    /* モーダル表示 */
+    #detail-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: var(--card); width: 92%; max-width: 450px; padding: 20px; border-radius: 15px; border-top: 10px solid var(--accent-1); max-height: 85vh; overflow-y: auto; }
+    .modal-content.alert-mode { border-top-color: var(--accent-2); }
+    
+    .res-card { background: #383838; border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 1px solid #555; }
+    .res-card.multi { border-color: var(--accent-2); }
+    .btn-close { width: 100%; padding: 15px; background: #555; color: #fff; border: none; border-radius: 8px; margin-top: 5px; font-weight: bold; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="header" style="text-align: center; margin-bottom: 15px;">
+    <h1 style="color:var(--accent-1); margin:0; font-size:1.5rem;">Reservation</h1>
+</div>
+
+<div class="section">
+    <div class="section-title">1. 予約入力</div>
+    <input id="name" placeholder="お客様名（必須）">
+    <input id="phone" type="tel" placeholder="電話番号（必須）" inputmode="tel">
+    <div id="calendar-inline"></div>
+    <input type="hidden" id="date">
+    <div class="flex-row">
+        <input id="time" type="time" value="19:00">
+        <input id="people" type="number" placeholder="人数" inputmode="numeric">
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">2. 席・担当・備考</div>
+    <div class="tile-group">
+        <input type="radio" name="seat_select" id="seat-1" value="1Fカウンター" checked class="tile-item"><label for="seat-1" class="tile-label">1Fカウンター</label>
+        <input type="radio" name="seat_select" id="seat-2" value="2F個室" class="tile-item"><label for="seat-2" class="tile-label">2F個室</label>
+        <input type="radio" name="seat_select" id="seat-3" value="3F個室" class="tile-item"><label for="seat-3" class="tile-label">3F個室</label>
+        <input type="radio" name="seat_select" id="seat-k" value="貸切" class="tile-item"><label for="seat-k" class="tile-label">貸切</label>
+    </div>
+    <input id="staff" placeholder="受付担当者名">
+    <textarea id="note" placeholder="備考・メモ" rows="2"></textarea>
+    <button class="btn-confirm" id="main-btn" onclick="openConfirm()">予約を確定して送信</button>
+</div>
+
+<div id="detail-modal"><div class="modal-content" id="modal-container">
+    <div style="margin-bottom:15px; border-bottom:1px solid #444; padding-bottom:10px;">
+        <span id="modal-title" style="font-weight:bold; font-size:1.2rem; color:var(--accent-1);">ご予約詳細</span>
+        <span id="res-date-title" style="float:right; color:#aaa; font-size:0.9rem;"></span>
+    </div>
+    <div id="modal-body"></div>
+    <button class="btn-close" onclick="closeModal()">閉じる</button>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ja.js"></script>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwtss__NPO_BNCjCd3wMAA_rpxR2U0b0g2WJcnab27wv0Jtt0WtZ9FbllH0Qa_bsLCl/exec";
+let bookedDatesList = [];
+let currentReservations = [];
+let fp;
+let editingReceivedAt = null;
+
+function initCalendar() {
+    fp = flatpickr("#calendar-inline", {
+        inline: true, locale: "ja", dateFormat: "Y-m-d", defaultDate: "today",
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+            const dateStr = fp.formatDate(dayElem.dateObj, "Y-m-d");
+            const count = bookedDatesList.filter(d => d === dateStr).length;
+            if (count === 1) dayElem.classList.add("res-single");
+            else if (count >= 2) dayElem.classList.add("res-multiple");
+        },
+        onChange: function(selectedDates, dateStr) {
+            document.getElementById('date').value = dateStr;
+            fetchReservations(true); 
+        }
+    });
+    document.getElementById('date').value = fp.formatDate(new Date(), "Y-m-d");
+}
+
+async function init() {
+    try {
+        const res = await fetch(GAS_URL);
+        bookedDatesList = await res.json();
+        initCalendar();
+    } catch (e) { initCalendar(); }
+}
+
+function fetchReservations(autoShow = false) {
+    const targetDate = document.getElementById('date').value;
+    fetch(`${GAS_URL}?date=${targetDate}`).then(res => res.json()).then(data => {
+        currentReservations = data;
+        if (autoShow && data.length > 0) showAllDetails(targetDate);
+    });
+}
+
+function showAllDetails(dateStr) {
+    const container = document.getElementById('modal-container');
+    const title = document.getElementById('modal-title');
+    const body = document.getElementById('modal-body');
+    document.getElementById('res-date-title').innerText = dateStr;
+    const count = currentReservations.length;
+    
+    if (count >= 2) { 
+        container.classList.add('alert-mode'); 
+        title.innerText = `【注意】予約が${count}件あります`; 
+        title.style.color = 'var(--accent-2)'; 
+    } else { 
+        container.classList.remove('alert-mode'); 
+        title.innerText = "ご予約詳細"; 
+        title.style.color = 'var(--accent-1)'; 
+    }
+
+    body.innerHTML = currentReservations.map((r) => `
+        <div class="res-card ${count >= 2 ? 'multi' : ''}">
+            <div style="font-size:1.4rem; font-weight:bold; color:${count >= 2 ? 'var(--accent-2)' : 'var(--accent-1)'}; border-bottom:1px solid #555; padding-bottom:5px; margin-bottom:10px;">
+                ${r.time} <span style="font-size:0.9rem; float:right; background:#555; padding:3px 12px; border-radius:4px; color:#fff;">${r.seat}</span>
+            </div>
+            <div style="margin:8px 0; font-size:1.1rem;"><strong>${r.name} 様</strong> (${r.people}名)</div>
+            <div style="color:#bbb; font-size:0.9rem;">担当: ${r.staff || '---'} / TEL: ${r.phone}</div>
+            <div style="margin-top:10px; display:flex; gap:10px;">
+                <button onclick="editMode('${encodeURIComponent(JSON.stringify(r))}')" style="flex:1; background:#444; color:#fff; border:1px solid #777; padding:8px; border-radius:4px; cursor:pointer;">訂正</button>
+                <button onclick="deleteRes('${r.name}', '${r.receivedAt}')" style="flex:1; background:#800; color:#fff; border:none; padding:8px; border-radius:4px; cursor:pointer;">削除</button>
+            </div>
+        </div>
+    `).join('');
+    document.getElementById('detail-modal').style.display = 'flex';
+}
+
+function editMode(data) {
+    const r = JSON.parse(decodeURIComponent(data));
+    document.getElementById('name').value = r.name;
+    document.getElementById('phone').value = r.phone;
+    document.getElementById('date').value = r.date;
+    document.getElementById('time').value = r.time;
+    document.getElementById('people').value = r.people;
+    document.getElementById('staff').value = r.staff;
+    document.getElementById('note').value = r.note;
+    const radios = document.getElementsByName('seat_select');
+    for(let rad of radios) { if(rad.value === r.seat) rad.checked = true; }
+
+    editingReceivedAt = r.receivedAt;
+    const btn = document.getElementById('main-btn');
+    btn.innerText = "内容の変更を保存する";
+    btn.style.background = "var(--save-green)";
+    btn.style.color = "#fff";
+    closeModal();
+    window.scrollTo({top:0, behavior:'smooth'});
+}
+
+async function deleteRes(name, receivedAt) {
+    if(!confirm(`${name}様の予約を完全に削除しますか？`)) return;
+    const payload = { method: "DELETE", name: name, receivedAt: receivedAt };
+    await fetch(GAS_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+    alert("削除完了"); location.reload();
+}
+
+function closeModal() { document.getElementById('detail-modal').style.display = 'none'; }
+window.onload = init;
+
+function openConfirm() {
+    const targetDate = document.getElementById('date').value;
+    const seatName = document.querySelector('input[name="seat_select"]:checked').value;
+    const nameVal = document.getElementById('name').value;
+    const phoneVal = document.getElementById('phone').value;
+
+    if(!nameVal || !phoneVal) return alert("名前と電話番号は必須です");
+
+    // 重複チェック
+    if (!editingReceivedAt) {
+        const isDuplicate = currentReservations.some(r => r.seat === seatName);
+        if (isDuplicate) {
+            if (!confirm(`【警告】既に「${seatName}」に予約が入っています。本当に追加しますか？`)) return;
+        }
+    }
+
+    const payload = {
+        method: editingReceivedAt ? "UPDATE" : "POST",
+        receivedAt: editingReceivedAt || new Date().toLocaleString('ja-JP'),
+        name: nameVal,
+        phone: phoneVal,
+        date: targetDate,
+        time: document.getElementById('time').value,
+        people: document.getElementById('people').value,
+        staff: document.getElementById('staff').value,
+        note: document.getElementById('note').value,
+        seat: seatName
+    };
+    
+    if(confirm(editingReceivedAt ? "変更を保存しますか？" : "予約を確定しますか？")) {
+        fetch(GAS_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
+        .then(() => { alert("完了しました"); location.reload(); });
+    }
+}
+</script>
+</body>
+</html>
