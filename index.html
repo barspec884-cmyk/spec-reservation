@@ -128,22 +128,23 @@
     <button class="btn-confirm" id="main-btn" onclick="openConfirm()">予約を確定して送信</button>
 </div>
 
-<div id="detail-modal"><div class="modal-content" id="modal-container">
-    <div style="margin-bottom:15px; border-bottom:1px solid #444; padding-bottom:10px;">
-        <span id="modal-title" style="font-weight:bold; font-size:1.2rem; color:var(--accent-1);">ご予約詳細</span>
-        <span id="res-date-title" style="float:right; color:#aaa; font-size:0.9rem;"></span>
+<div id="detail-modal">
+    <div class="modal-content" id="modal-container">
+        <div style="margin-bottom:15px; border-bottom:1px solid #444; padding-bottom:10px;">
+            <span id="modal-title" style="font-weight:bold; font-size:1.2rem; color:var(--accent-1);">ご予約詳細</span>
+            <span id="res-date-title" style="float:right; color:#aaa; font-size:0.9rem;"></span>
+        </div>
+        <div id="modal-body"></div>
+        <button class="btn-close" onclick="closeModal()">閉じる</button>
     </div>
-    <div id="modal-body"></div>
-    <button class="btn-close" onclick="closeModal()">閉じる</button>
-</div></div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ja.js"></script>
 
 <script>
-// 【重要】新しいデプロイURLに差し替え済み
-// 【重要】ここを新しいURLに更新してください
-const GAS_URL = "https://script.google.com/macros/s/AKfycby_7bStCm2G9Wa7Q8B2m6BxPCwxSrgF4RUHAtx1OjFGLC-l0V02sPwqLlhj_ytjzKbB/exec";
+// 【修正箇所1】変数宣言の重複エラー（const GAS_URL = const GAS_URL）を修正しました
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwqHEkXvFrTLIRQuEd8ScVd0Wa8xU43d52RodkZu9izjZVrQlGpQ8bMrfmPTbLw0iwg/exec";
 let bookedDatesList = [];
 let currentReservations = [];
 let fp;
@@ -236,11 +237,28 @@ function editMode(data) {
     window.scrollTo({top:0, behavior:'smooth'});
 }
 
+// 【修正箇所2】deleteRes関数内のfetch文が途中で壊れて（カッコの閉じ忘れ等）エラーになっていたのを修正しました
 async function deleteRes(name, receivedAt) {
     if(!confirm(`${name}様の予約を完全に削除しますか？`)) return;
     const payload = { method: "DELETE", name: name, receivedAt: receivedAt };
-    await fetch(GAS_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
-    alert("削除完了"); location.reload();
+    
+    // 【修正】削除リクエストも新しいfetch方式に統一
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+      },
+      body: JSON.stringify(payload) 
+    })
+    .then(response => response.json())
+    .then(result => {
+      alert("予約を削除しました。");
+      location.reload(); // 画面を更新
+    })
+    .catch(error => {
+      console.error("エラー:", error);
+      alert("削除に失敗しました。");
+    });
 }
 
 function closeModal() { document.getElementById('detail-modal').style.display = 'none'; }
@@ -263,7 +281,6 @@ function openConfirm() {
 
     const payload = {
         method: editingReceivedAt ? "UPDATE" : "POST",
-
         receivedAt: editingReceivedAt || new Date().toLocaleString('ja-JP'),
         name: nameVal,
         phone: phoneVal,
@@ -276,8 +293,24 @@ function openConfirm() {
     };
     
     if(confirm(editingReceivedAt ? "変更を保存しますか？" : "予約を確定しますか？")) {
-        fetch(GAS_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) })
-        .then(() => { alert("完了しました"); location.reload(); });
+        // 【修正箇所3】予約確定時（POST）のfetchを、メール送信が成功する形式に修正しました
+        // ※ mode: "no-cors" を外して text/plain で送るのが正解です
+        fetch(GAS_URL, { 
+            method: 'POST', 
+            headers: {
+                'Content-Type': 'text/plain',
+            },
+            body: JSON.stringify(payload) 
+        })
+        .then(response => response.json())
+        .then(result => {
+            alert("予約が完了しました！");
+            location.reload(); 
+        })
+        .catch(error => {
+            console.error("エラー:", error);
+            alert("送信に失敗しました。");
+        });
     }
 }
 </script>
